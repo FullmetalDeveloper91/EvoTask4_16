@@ -4,42 +4,53 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.fmd.EvoTask4_16.dto.Message;
-import ru.fmd.EvoTask4_16.repository.iRepository;
+import ru.fmd.EvoTask4_16.repository.MessageRepository;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/message")
 public class MessageController {
-    private final iRepository<Message> repository;
 
-    public MessageController(iRepository<Message> repository) {
+    private final MessageRepository repository;
+
+    public MessageController(MessageRepository repository) {
         this.repository = repository;
     }
 
     @GetMapping
     public Iterable<Message> getMessages() {
-        return repository.getAll();
+        return repository.findAll();
     }
 
     @GetMapping("/{id}")
     public Optional<Message> findMessageById(@PathVariable int id) {
-        return repository.getById(id);
+        return repository.findById(id);
     }
 
     @PostMapping
     public ResponseEntity<Message> addMessage(@RequestBody Message message) {
-        repository.add(message);
+        message.setTime(LocalDateTime.now());
+        repository.save(message);
         return new ResponseEntity<>(message, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Message> updateMessage(@PathVariable int id, @RequestBody Message message) {
-        return repository.update(id, message) == -1 ? addMessage(message) : new ResponseEntity<>(message, HttpStatus.OK);
+        var oldMessage = repository.findById(id).orElse(null);
+
+        if(oldMessage != null){
+            oldMessage.setTitle(message.getTitle());
+            oldMessage.setText(message.getText());
+
+            return new ResponseEntity<>(repository.save(oldMessage), HttpStatus.OK);
+        }else
+            return addMessage(message);
     }
 
     @DeleteMapping("/{id}")
-    public HttpStatus deleteMessage(@PathVariable int id) {
-        return repository.delete(id) ? HttpStatus.OK : HttpStatus.NOT_FOUND;
+    public void deleteMessage(@PathVariable int id) {
+        repository.deleteById(id);
     }
 }

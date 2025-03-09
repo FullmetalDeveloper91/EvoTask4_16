@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.fmd.EvoTask4_16.dto.Person;
-import ru.fmd.EvoTask4_16.repository.iRepository;
+import ru.fmd.EvoTask4_16.repository.PersonRepository;
 
 import java.util.Optional;
 
@@ -12,35 +12,45 @@ import java.util.Optional;
 @RequestMapping("/person")
 public class PersonController {
 
-    private final iRepository<Person> repository;
+    private final PersonRepository repository;
 
-    public PersonController(iRepository<Person> repository) {
+    public PersonController(PersonRepository repository) {
         this.repository = repository;
     }
 
     @GetMapping
     public Iterable<Person> getPerson() {
-        return repository.getAll();
+        return repository.findAll();
     }
 
     @GetMapping("/{id}")
     public Optional<Person> findPersonById(@PathVariable int id) {
-        return repository.getById(id);
+        return repository.findById(id);
     }
 
     @PostMapping
     public ResponseEntity<Person> addPerson(@RequestBody Person person) {
-        repository.add(person);
+        repository.save(person);
         return new ResponseEntity<>(person, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Person> updatePerson(@PathVariable int id, @RequestBody Person person) {
-        return repository.update(id, person) == -1 ? addPerson(person) : new ResponseEntity<>(person, HttpStatus.OK);
+        var oldPerson = repository.findById(id).orElse(null);
+
+        if(oldPerson != null){
+            oldPerson.setFirstname(person.getFirstname());
+            oldPerson.setSurname(person.getSurname());
+            oldPerson.setLastname(person.getLastname());
+            oldPerson.setBirthday(person.getBirthday());
+
+            return new ResponseEntity<>(repository.save(oldPerson), HttpStatus.OK);
+        }else
+            return addPerson(person);
     }
 
     @DeleteMapping("/{id}")
-    public HttpStatus deletePerson(@PathVariable int id) {
-        return repository.delete(id) ? HttpStatus.OK : HttpStatus.NOT_FOUND;
+    public void deletePerson(@PathVariable int id) {
+        repository.deleteById(id);
     }
 }
